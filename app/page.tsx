@@ -99,8 +99,9 @@ export default async function Home() {
           </section>
         ) : (
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Hesabınız <b>gozlemci</b> rolünde. Kayıt eklemek için rolünüzün{" "}
-            <b>yonetici</b> olarak güncellenmesi gerekir.
+            <b>Gözlemci</b> rolündesiniz: aşağıdaki tüm notları okuyabilirsiniz; yeni
+            not ekleyemez veya silemezsiniz. Eklemek için hesabınızın{" "}
+            <b>yonetici</b> olarak tanımlanması gerekir.
           </p>
         )}
 
