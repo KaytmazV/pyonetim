@@ -15,13 +15,14 @@ export async function GET(request: Request) {
     } = await supabase.auth.getUser();
 
     if (user) {
+      // Sadece ilk kayit: mevcut rolu (yonetici) ezme
       await supabase.from("profiles").upsert(
         {
           id: user.id,
           email: user.email ?? "",
           role: "gozlemci",
         },
-        { onConflict: "id" }
+        { onConflict: "id", ignoreDuplicates: true }
       );
     }
   }
