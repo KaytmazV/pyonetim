@@ -1,49 +1,24 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { SiteLogForm } from "./site-log-form";
 import { deleteSiteLog, signOutAction } from "./actions";
+import { getAppSession, type AppRole } from "@/lib/app-auth-session";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-type UserRole = "yonetici" | "gozlemci";
-
 export default async function Home() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const session = await getAppSession();
+  if (!session) {
     redirect("/login");
   }
-
-  const { data: existingProfile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  let role: UserRole = "gozlemci";
-  if (!existingProfile) {
-    await supabase
-      .from("profiles")
-      .upsert(
-        {
-          id: user.id,
-          email: user.email ?? "",
-          role: "gozlemci",
-        },
-        { onConflict: "id" }
-      );
-  } else if (existingProfile.role === "yonetici") {
-    role = "yonetici";
-  }
+  const role: AppRole = session.role;
 
   let rows: { id: string; created_at: string; note: string }[] = [];
   let fetchError: string | null = null;
 
   try {
-    const { data, error } = await supabase
+    const admin = createAdminClient();
+    const { data, error } = await admin
       .from("site_logs")
       .select("id, created_at, note")
       .order("created_at", { ascending: false })
@@ -65,7 +40,7 @@ export default async function Home() {
           <p className="mt-1 text-sm text-zinc-600">Saha notları ve günlük kayıtlar.</p>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-600">
             <span>
-              {user.email} • Rol:{" "}
+              {session.username} • Rol:{" "}
               <b className="font-semibold text-zinc-800">{role}</b>
             </span>
             <form action={signOutAction}>

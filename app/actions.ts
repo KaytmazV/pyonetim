@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { clearAppSession, getAppSession } from "@/lib/app-auth-session";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
 
@@ -15,30 +16,19 @@ export async function addSiteLog(formData: FormData): Promise<ActionResult> {
   }
 
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+    const session = await getAppSession();
+    if (!session) {
       return { ok: false, message: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
     }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profile?.role !== "yonetici") {
+    if (session.role !== "yonetici") {
       return {
         ok: false,
         message: "Yalnızca yonetici rolü kayıt ekleyebilir.",
       };
     }
 
-    const { error } = await supabase
-      .from("site_logs")
-      .insert({ note, created_by: user.id });
+    const admin = createAdminClient();
+    const { error } = await admin.from("site_logs").insert({ note });
     if (error) {
       return { ok: false, message: error.message };
     }
@@ -62,8 +52,7 @@ export async function submitSiteLog(
 }
 
 export async function signOutAction() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  await clearAppSession();
   redirect("/login");
 }
 
@@ -73,25 +62,17 @@ export async function deleteSiteLog(formData: FormData) {
     return;
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  const session = await getAppSession();
+  if (!session) {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (profile?.role !== "yonetici") {
+  if (session.role !== "yonetici") {
     return;
   }
 
-  const { error } = await supabase.from("site_logs").delete().eq("id", id);
+  const admin = createAdminClient();
+  const { error } = await admin.from("site_logs").delete().eq("id", id);
   if (!error) {
     revalidatePath("/");
   }
