@@ -22,6 +22,12 @@ export default async function LoginPage() {
           </p>
         </header>
         <LoginForm />
+        <p className="text-center text-sm text-zinc-500">
+          E-posta istemiyorsanız:{" "}
+          <a href="/gozlem" className="text-zinc-700 underline">
+            Gözlemci (şifre ile)
+          </a>
+        </p>
       </main>
     </div>
   );
