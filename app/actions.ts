@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
@@ -15,7 +16,29 @@ export async function addSiteLog(formData: FormData): Promise<ActionResult> {
 
   try {
     const supabase = await createClient();
-    const { error } = await supabase.from("site_logs").insert({ note });
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return { ok: false, message: "Oturum bulunamadı. Lütfen tekrar giriş yapın." };
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.role !== "yonetici") {
+      return {
+        ok: false,
+        message: "Yalnızca yonetici rolü kayıt ekleyebilir.",
+      };
+    }
+
+    const { error } = await supabase
+      .from("site_logs")
+      .insert({ note, created_by: user.id });
     if (error) {
       return { ok: false, message: error.message };
     }
@@ -36,4 +59,10 @@ export async function submitSiteLog(
     return { success: true };
   }
   return { message: result.message };
+}
+
+export async function signOutAction() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/login");
 }

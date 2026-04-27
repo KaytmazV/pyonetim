@@ -1,36 +1,60 @@
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { SiteLogForm } from "./site-log-form";
+import { signOutAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-function envConfigured() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
-}
+type UserRole = "yonetici" | "gozlemci";
 
 export default async function Home() {
-  const configured = envConfigured();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  let role: UserRole = "gozlemci";
+  if (!existingProfile) {
+    await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id: user.id,
+          email: user.email ?? "",
+          role: "gozlemci",
+        },
+        { onConflict: "id" }
+      );
+  } else if (existingProfile.role === "yonetici") {
+    role = "yonetici";
+  }
+
   let rows: { id: string; created_at: string; note: string }[] = [];
   let fetchError: string | null = null;
 
-  if (configured) {
-    try {
-      const supabase = await createClient();
-      const { data, error } = await supabase
-        .from("site_logs")
-        .select("id, created_at, note")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) {
-        fetchError = error.message;
-      } else {
-        rows = data ?? [];
-      }
-    } catch (e) {
-      fetchError = e instanceof Error ? e.message : "Bağlantı hatası";
+  try {
+    const { data, error } = await supabase
+      .from("site_logs")
+      .select("id, created_at, note")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) {
+      fetchError = error.message;
+    } else {
+      rows = data ?? [];
     }
+  } catch (e) {
+    fetchError = e instanceof Error ? e.message : "Bağlantı hatası";
   }
 
   return (
@@ -38,26 +62,22 @@ export default async function Home() {
       <main className="mx-auto flex max-w-lg flex-col gap-8">
         <header>
           <h1 className="text-2xl font-semibold tracking-tight">PYönetim</h1>
-          <p className="mt-1 text-sm text-zinc-600">
-            Şantiye / saha notu — veri girişi ve liste (Supabase).
-          </p>
+          <p className="mt-1 text-sm text-zinc-600">Saha notları ve günlük kayıtlar.</p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-600">
+            <span>
+              {user.email} • Rol:{" "}
+              <b className="font-semibold text-zinc-800">{role}</b>
+            </span>
+            <form action={signOutAction}>
+              <button
+                type="submit"
+                className="rounded-md border border-zinc-300 px-2 py-1 text-zinc-700 hover:bg-zinc-100"
+              >
+                Çıkış
+              </button>
+            </form>
+          </div>
         </header>
-
-        {!configured ? (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <code className="rounded bg-amber-100/80 px-1">web/.env.local</code>{" "}
-            dosyasına{" "}
-            <code className="rounded bg-amber-100/80 px-1">
-              NEXT_PUBLIC_SUPABASE_URL
-            </code>{" "}
-            ve{" "}
-            <code className="rounded bg-amber-100/80 px-1">
-              NEXT_PUBLIC_SUPABASE_ANON_KEY
-            </code>{" "}
-            ekleyin. Şablon:{" "}
-            <code className="rounded bg-amber-100/80 px-1">.env.example</code>
-          </p>
-        ) : null}
 
         {fetchError ? (
           <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -72,14 +92,19 @@ export default async function Home() {
           </p>
         ) : null}
 
-        {configured ? (
+        {role === "yonetici" ? (
           <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
             <h2 className="text-sm font-medium text-zinc-700">Yeni not</h2>
             <SiteLogForm />
           </section>
-        ) : null}
+        ) : (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Hesabınız <b>gozlemci</b> rolünde. Kayıt eklemek için rolünüzün{" "}
+            <b>yonetici</b> olarak güncellenmesi gerekir.
+          </p>
+        )}
 
-        {configured && !fetchError ? (
+        {!fetchError ? (
           <section>
             <h2 className="text-sm font-medium text-zinc-700">Son kayıtlar</h2>
             <ul className="mt-3 space-y-2">
