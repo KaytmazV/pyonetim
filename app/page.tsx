@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { SiteLogForm } from "./site-log-form";
-import { signOutAction } from "./actions";
+import { deleteSiteLog, signOutAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -116,9 +116,22 @@ export default async function Home() {
                     key={r.id}
                     className="rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm shadow-sm"
                   >
-                    <time className="text-xs text-zinc-500">
-                      {new Date(r.created_at).toLocaleString("tr-TR")}
-                    </time>
+                    <div className="flex items-start justify-between gap-2">
+                      <time className="text-xs text-zinc-500">
+                        {new Date(r.created_at).toLocaleString("tr-TR")}
+                      </time>
+                      {role === "yonetici" ? (
+                        <form action={deleteSiteLog}>
+                          <input type="hidden" name="id" value={r.id} />
+                          <button
+                            type="submit"
+                            className="rounded border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-800 hover:bg-red-100"
+                          >
+                            Sil
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
                     <p className="mt-1 whitespace-pre-wrap text-zinc-800">
                       {r.note}
                     </p>

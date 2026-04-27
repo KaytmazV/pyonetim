@@ -66,3 +66,33 @@ export async function signOutAction() {
   await supabase.auth.signOut();
   redirect("/login");
 }
+
+export async function deleteSiteLog(formData: FormData) {
+  const id = (formData.get("id") as string | null)?.trim();
+  if (!id) {
+    return;
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profile?.role !== "yonetici") {
+    return;
+  }
+
+  const { error } = await supabase.from("site_logs").delete().eq("id", id);
+  if (!error) {
+    revalidatePath("/");
+  }
+}
