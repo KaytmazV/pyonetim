@@ -34,6 +34,18 @@ export function PuantajForm() {
         className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
       />
       <input
+        name="calisan_adi"
+        required
+        placeholder="Çalışan adı soyadı"
+        className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
+      />
+      <input
+        name="gorev"
+        required
+        placeholder="Görevi (örn: Kalıpçı, Usta)"
+        className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
+      />
+      <input
         name="taseron"
         placeholder="Taşeron (opsiyonel)"
         className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"

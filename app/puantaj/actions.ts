@@ -17,6 +17,8 @@ export async function submitPuantaj(
 
   const entryDate = String(formData.get("entry_date") ?? "").trim();
   const ekipAdi = String(formData.get("ekip_adi") ?? "").trim();
+  const calisanAdi = String(formData.get("calisan_adi") ?? "").trim();
+  const gorev = String(formData.get("gorev") ?? "").trim();
   const taseron = String(formData.get("taseron") ?? "").trim();
   const grupKodu = String(formData.get("grup_kodu") ?? "").trim();
   const bolge = String(formData.get("bolge") ?? "").trim();
@@ -26,8 +28,8 @@ export async function submitPuantaj(
   const saatlikMaliyet = Number(formData.get("saatlik_maliyet"));
   const notlar = String(formData.get("notlar") ?? "").trim();
 
-  if (!entryDate || !ekipAdi) {
-    return { message: "Tarih ve ekip adı zorunlu." };
+  if (!entryDate || !ekipAdi || !calisanAdi || !gorev) {
+    return { message: "Tarih, ekip adı, çalışan adı ve görev zorunlu." };
   }
   if (!["gunduz", "gece"].includes(vardiya)) {
     return { message: "Vardiya geçersiz." };
@@ -46,6 +48,8 @@ export async function submitPuantaj(
   const { error } = await admin.from("labor_entries").insert({
     entry_date: entryDate,
     ekip_adi: ekipAdi,
+    calisan_adi: calisanAdi,
+    gorev,
     taseron: taseron || null,
     grup_kodu: grupKodu || null,
     bolge: bolge || null,

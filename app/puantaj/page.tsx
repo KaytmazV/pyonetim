@@ -11,6 +11,8 @@ type LaborEntry = {
   id: string;
   entry_date: string;
   ekip_adi: string;
+  calisan_adi: string | null;
+  gorev: string | null;
   taseron: string | null;
   grup_kodu: string | null;
   bolge: string | null;
@@ -35,7 +37,9 @@ export default async function PuantajPage() {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("labor_entries")
-    .select("id, entry_date, ekip_adi, taseron, grup_kodu, bolge, vardiya, kisi_sayisi, saat, saatlik_maliyet")
+    .select(
+      "id, entry_date, ekip_adi, calisan_adi, gorev, taseron, grup_kodu, bolge, vardiya, kisi_sayisi, saat, saatlik_maliyet"
+    )
     .order("entry_date", { ascending: false })
     .limit(500);
 
@@ -201,11 +205,13 @@ export default async function PuantajPage() {
 
         {!fetchError ? (
           <section className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
-            <table className="min-w-[1100px] w-full text-sm">
+            <table className="min-w-[1250px] w-full text-sm">
                 <thead className="bg-zinc-100 text-left text-zinc-700">
                   <tr>
                     <th className="px-3 py-2">Tarih</th>
                     <th className="px-3 py-2">Ekip</th>
+                    <th className="px-3 py-2">Çalışan</th>
+                    <th className="px-3 py-2">Görev</th>
                     <th className="px-3 py-2">Taşeron</th>
                     <th className="px-3 py-2">Grup</th>
                     <th className="px-3 py-2">Bölge</th>
@@ -221,7 +227,7 @@ export default async function PuantajPage() {
                 <tbody>
                   {rows.length === 0 ? (
                     <tr>
-                      <td className="px-3 py-4 text-zinc-500" colSpan={12}>
+                      <td className="px-3 py-4 text-zinc-500" colSpan={14}>
                         Henüz puantaj kaydı yok.
                       </td>
                     </tr>
@@ -233,6 +239,8 @@ export default async function PuantajPage() {
                         <tr key={row.id} className="border-t border-zinc-100">
                           <td className="px-3 py-2">{new Date(row.entry_date).toLocaleDateString("tr-TR")}</td>
                           <td className="px-3 py-2">{row.ekip_adi}</td>
+                          <td className="px-3 py-2">{row.calisan_adi ?? "-"}</td>
+                          <td className="px-3 py-2">{row.gorev ?? "-"}</td>
                           <td className="px-3 py-2">{row.taseron ?? "-"}</td>
                           <td className="px-3 py-2">{row.grup_kodu ?? "-"}</td>
                           <td className="px-3 py-2">{row.bolge ?? "-"}</td>

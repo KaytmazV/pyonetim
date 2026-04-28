@@ -131,6 +131,8 @@ create table if not exists public.labor_entries (
   created_at timestamptz not null default now(),
   entry_date date not null,
   ekip_adi text not null,
+  calisan_adi text,
+  gorev text,
   taseron text,
   grup_kodu text,
   bolge text,
