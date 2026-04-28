@@ -95,3 +95,32 @@ create policy "site_logs_delete_yonetici"
       where p.id = auth.uid() and p.role = 'yonetici'
     )
   );
+
+-- 3) Kesif kalemleri
+create table if not exists public.discovery_items (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  poz_no text,
+  grup_kodu text,
+  item_name text not null,
+  unit text not null,
+  quantity numeric(14,2) not null check (quantity > 0),
+  unit_price numeric(14,2) not null check (unit_price >= 0),
+  malzeme_birim_fiyat numeric(14,2) not null default 0 check (malzeme_birim_fiyat >= 0),
+  montaj_birim_fiyat numeric(14,2) not null default 0 check (montaj_birim_fiyat >= 0),
+  kesif_turu text not null default 'on_kesif' check (kesif_turu in ('on_kesif', 'kesin_kesif')),
+  durum text not null default 'taslak' check (durum in ('taslak', 'onayli')),
+  created_by_username text
+);
+
+-- 4) Bütçe
+create table if not exists public.project_budgets (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  scope text not null default 'global',
+  allocated_budget numeric(14,2) not null check (allocated_budget >= 0),
+  note text,
+  created_by_username text,
+  updated_by_username text
+);

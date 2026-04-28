@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { SiteLogForm } from "./site-log-form";
 import { deleteSiteLog, signOutAction } from "./actions";
 import { getAppSession, type AppRole } from "@/lib/app-auth-session";
@@ -38,6 +39,28 @@ export default async function Home() {
         <header>
           <h1 className="text-2xl font-semibold tracking-tight">PYönetim</h1>
           <p className="mt-1 text-sm text-zinc-600">Saha notları ve günlük kayıtlar.</p>
+          <div className="mt-3">
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/kesif"
+                className="inline-flex rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
+              >
+                Keşif sayfasına git
+              </Link>
+              <Link
+                href="/analiz"
+                className="inline-flex rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
+              >
+                Analiz sayfası
+              </Link>
+              <Link
+                href="/butce"
+                className="inline-flex rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
+              >
+                Bütçe planı
+              </Link>
+            </div>
+          </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-600">
             <span>
               {session.username} • Rol:{" "}
