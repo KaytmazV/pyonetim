@@ -27,19 +27,36 @@ export default async function ButcePage() {
       .maybeSingle(),
     admin
       .from("discovery_items")
-      .select("item_name, quantity, malzeme_birim_fiyat, montaj_birim_fiyat")
+      .select("item_name, kesif_turu, quantity, malzeme_birim_fiyat, montaj_birim_fiyat")
       .limit(2000),
   ]);
 
   const allocated = Number(budget?.allocated_budget ?? 0);
   const note = budget?.note ?? "";
-  const totalCost = (discoveryItems ?? []).reduce(
-    (sum, row) =>
-      sum +
-      Number(row.quantity) *
-        (Number(row.malzeme_birim_fiyat) + Number(row.montaj_birim_fiyat)),
-    0
-  );
+  const kesinKesifCost = (discoveryItems ?? [])
+    .filter((row) => row.kesif_turu === "kesin_kesif")
+    .reduce(
+      (sum, row) =>
+        sum +
+        Number(row.quantity) *
+          (Number(row.malzeme_birim_fiyat) + Number(row.montaj_birim_fiyat)),
+      0
+    );
+  const onKesifCost = (discoveryItems ?? [])
+    .filter((row) => row.kesif_turu === "on_kesif")
+    .reduce(
+      (sum, row) =>
+        sum +
+        Number(row.quantity) *
+          (Number(row.malzeme_birim_fiyat) + Number(row.montaj_birim_fiyat)),
+      0
+    );
+  const ongoruToplam = kesinKesifCost + onKesifCost;
+  const totalCost = kesinKesifCost;
+  const totalCostWithOnKesif = ongoruToplam;
+  const remainingWithOnKesif = allocated - totalCostWithOnKesif;
+  const usagePctWithOnKesif =
+    allocated > 0 ? (totalCostWithOnKesif / allocated) * 100 : 0;
   const remaining = allocated - totalCost;
   const usagePct = allocated > 0 ? (totalCost / allocated) * 100 : 0;
   const levelClass =
@@ -50,6 +67,18 @@ export default async function ButcePage() {
       : "text-emerald-700";
 
   const topLines = (discoveryItems ?? [])
+    .filter((row) => row.kesif_turu === "kesin_kesif")
+    .map((row) => ({
+      item_name: row.item_name,
+      line_total:
+        Number(row.quantity) *
+        (Number(row.malzeme_birim_fiyat) + Number(row.montaj_birim_fiyat)),
+    }))
+    .sort((a, b) => b.line_total - a.line_total)
+    .slice(0, 10);
+
+  const topOnKesifLines = (discoveryItems ?? [])
+    .filter((row) => row.kesif_turu === "on_kesif")
     .map((row) => ({
       item_name: row.item_name,
       line_total:
@@ -107,8 +136,12 @@ export default async function ButcePage() {
             <p className="mt-2 text-xl font-semibold">{formatTry(allocated)}</p>
           </article>
           <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs text-zinc-500">Keşif Toplamı</p>
+            <p className="text-xs text-zinc-500">Kesin Keşif (Bütçeden Düşen)</p>
             <p className="mt-2 text-xl font-semibold">{formatTry(totalCost)}</p>
+          </article>
+          <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-xs text-zinc-500">Ön Keşif (Tahmini)</p>
+            <p className="mt-2 text-xl font-semibold">{formatTry(onKesifCost)}</p>
           </article>
           <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-xs text-zinc-500">Kalan Bütçe</p>
@@ -125,7 +158,43 @@ export default async function ButcePage() {
         </section>
 
         <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-medium text-zinc-700">En Yüksek Maliyetli Kalemler</h2>
+          <h2 className="text-sm font-medium text-zinc-700">Öngörü (Kesin + Ön)</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <article className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+              <p className="text-xs text-zinc-500">Tahmini Toplam</p>
+              <p className="mt-1 text-lg font-semibold">{formatTry(totalCostWithOnKesif)}</p>
+            </article>
+            <article className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+              <p className="text-xs text-zinc-500">Tahmini Kalan</p>
+              <p
+                className={`mt-1 text-lg font-semibold ${
+                  remainingWithOnKesif < 0 ? "text-red-700" : "text-zinc-900"
+                }`}
+              >
+                {formatTry(remainingWithOnKesif)}
+              </p>
+            </article>
+            <article className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+              <p className="text-xs text-zinc-500">Tahmini Kullanım</p>
+              <p
+                className={`mt-1 text-lg font-semibold ${
+                  usagePctWithOnKesif > 100
+                    ? "text-red-700"
+                    : usagePctWithOnKesif > 90
+                    ? "text-amber-700"
+                    : "text-emerald-700"
+                }`}
+              >
+                %{Number.isFinite(usagePctWithOnKesif) ? usagePctWithOnKesif.toFixed(1) : "0.0"}
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-medium text-zinc-700">
+            En Yüksek Maliyetli Kalemler (Kesin Keşif)
+          </h2>
           <ul className="mt-3 space-y-2">
             {topLines.length === 0 ? (
               <li className="text-sm text-zinc-500">Henüz keşif kalemi yok.</li>
@@ -135,6 +204,32 @@ export default async function ButcePage() {
                 return (
                   <li
                     key={`${line.item_name}-${idx}`}
+                    className="flex items-center justify-between rounded-lg border border-zinc-100 px-3 py-2"
+                  >
+                    <span className="text-sm text-zinc-700">{line.item_name}</span>
+                    <span className="text-xs text-zinc-600">
+                      {formatTry(line.line_total)} • %{pct.toFixed(1)}
+                    </span>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-medium text-zinc-700">
+            En Yüksek Maliyetli Kalemler (Ön Keşif)
+          </h2>
+          <ul className="mt-3 space-y-2">
+            {topOnKesifLines.length === 0 ? (
+              <li className="text-sm text-zinc-500">Ön keşif kalemi yok.</li>
+            ) : (
+              topOnKesifLines.map((line, idx) => {
+                const pct = onKesifCost > 0 ? (line.line_total / onKesifCost) * 100 : 0;
+                return (
+                  <li
+                    key={`${line.item_name}-on-${idx}`}
                     className="flex items-center justify-between rounded-lg border border-zinc-100 px-3 py-2"
                   >
                     <span className="text-sm text-zinc-700">{line.item_name}</span>

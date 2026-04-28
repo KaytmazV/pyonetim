@@ -85,9 +85,19 @@ export default async function AnalizPage() {
   }));
 
   const totalAmount = lines.reduce((sum, item) => sum + item.lineTotal, 0);
+  const onKesifTotal = lines
+    .filter((item) => item.kesif_turu === "on_kesif")
+    .reduce((sum, item) => sum + item.lineTotal, 0);
+  const kesinKesifTotal = lines
+    .filter((item) => item.kesif_turu === "kesin_kesif")
+    .reduce((sum, item) => sum + item.lineTotal, 0);
   const allocatedBudget = Number(budget?.allocated_budget ?? 0);
-  const remainingBudget = allocatedBudget - totalAmount;
-  const budgetUsagePct = allocatedBudget > 0 ? (totalAmount / allocatedBudget) * 100 : 0;
+  const remainingBudget = allocatedBudget - kesinKesifTotal;
+  const budgetUsagePct =
+    allocatedBudget > 0 ? (kesinKesifTotal / allocatedBudget) * 100 : 0;
+  const projectedUsagePct =
+    allocatedBudget > 0 ? ((kesinKesifTotal + onKesifTotal) / allocatedBudget) * 100 : 0;
+  const projectedRemaining = allocatedBudget - (kesinKesifTotal + onKesifTotal);
   const totalCount = lines.length;
   const avgUnitPrice =
     totalCount === 0
@@ -113,12 +123,6 @@ export default async function AnalizPage() {
     return (top5 / totalAmount) * 100;
   })();
 
-  const onKesifTotal = lines
-    .filter((item) => item.kesif_turu === "on_kesif")
-    .reduce((sum, item) => sum + item.lineTotal, 0);
-  const kesinKesifTotal = lines
-    .filter((item) => item.kesif_turu === "kesin_kesif")
-    .reduce((sum, item) => sum + item.lineTotal, 0);
   const mukayeseliFark = kesinKesifTotal - onKesifTotal;
   const mukayeseliFarkPct =
     onKesifTotal > 0 ? (mukayeseliFark / onKesifTotal) * 100 : 0;
@@ -227,10 +231,14 @@ export default async function AnalizPage() {
                   Bütçeyi düzenle
                 </Link>
               </div>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <div className="mt-3 grid gap-3 sm:grid-cols-4">
                 <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
                   <p className="text-xs text-zinc-500">Ayrılan Bütçe</p>
                   <p className="mt-1 text-lg font-semibold">{formatTry(allocatedBudget)}</p>
+                </div>
+                <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
+                  <p className="text-xs text-zinc-500">Kesin Keşif (Düşen)</p>
+                  <p className="mt-1 text-lg font-semibold">{formatTry(kesinKesifTotal)}</p>
                 </div>
                 <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
                   <p className="text-xs text-zinc-500">Kalan Bütçe</p>
@@ -254,6 +262,36 @@ export default async function AnalizPage() {
                     }`}
                   >
                     %{Number.isFinite(budgetUsagePct) ? budgetUsagePct.toFixed(1) : "0.0"}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
+                  <p className="text-xs text-zinc-500">Ön Keşif (Tahmini)</p>
+                  <p className="mt-1 text-lg font-semibold">{formatTry(onKesifTotal)}</p>
+                </div>
+                <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
+                  <p className="text-xs text-zinc-500">Tahmini Kalan</p>
+                  <p
+                    className={`mt-1 text-lg font-semibold ${
+                      projectedRemaining < 0 ? "text-red-700" : "text-zinc-900"
+                    }`}
+                  >
+                    {formatTry(projectedRemaining)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
+                  <p className="text-xs text-zinc-500">Tahmini Kullanım</p>
+                  <p
+                    className={`mt-1 text-lg font-semibold ${
+                      projectedUsagePct > 100
+                        ? "text-red-700"
+                        : projectedUsagePct > 90
+                        ? "text-amber-700"
+                        : "text-emerald-700"
+                    }`}
+                  >
+                    %{Number.isFinite(projectedUsagePct) ? projectedUsagePct.toFixed(1) : "0.0"}
                   </p>
                 </div>
               </div>
