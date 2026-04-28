@@ -59,6 +59,12 @@ export default async function Home() {
               >
                 Bütçe planı
               </Link>
+              <Link
+                href="/puantaj"
+                className="inline-flex rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
+              >
+                Puantaj
+              </Link>
             </div>
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-600">
