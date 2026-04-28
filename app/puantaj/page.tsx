@@ -67,6 +67,23 @@ export default async function PuantajPage() {
   const groupStats = [...byGroup.entries()]
     .map(([grup, stat]) => ({ grup, ...stat }))
     .sort((a, b) => b.maliyet - a.maliyet);
+  const maxGroupCost = groupStats[0]?.maliyet ?? 0;
+
+  const byDate = new Map<string, { adamSaat: number; maliyet: number }>();
+  rows.forEach((row) => {
+    const key = row.entry_date;
+    const adamSaat = Number(row.kisi_sayisi) * Number(row.saat);
+    const maliyet = adamSaat * Number(row.saatlik_maliyet);
+    const prev = byDate.get(key) ?? { adamSaat: 0, maliyet: 0 };
+    byDate.set(key, {
+      adamSaat: prev.adamSaat + adamSaat,
+      maliyet: prev.maliyet + maliyet,
+    });
+  });
+  const dateStats = [...byDate.entries()]
+    .map(([date, stat]) => ({ date, ...stat }))
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+  const latestDay = dateStats[0] ?? null;
 
   return (
     <div className="min-h-full bg-zinc-50 px-4 py-10 text-zinc-900">
@@ -105,23 +122,76 @@ export default async function PuantajPage() {
         )}
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs text-zinc-500">Toplam Kayıt</p>
-            <p className="mt-2 text-2xl font-semibold">{rows.length}</p>
+          <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Toplam Kayıt</p>
+            <p className="mt-2 text-3xl font-semibold">{rows.length}</p>
           </article>
-          <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs text-zinc-500">Toplam Adam-Saat</p>
-            <p className="mt-2 text-2xl font-semibold">{totals.adamSaat.toLocaleString("tr-TR")}</p>
+          <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Toplam Adam-Saat
+            </p>
+            <p className="mt-2 text-3xl font-semibold">{totals.adamSaat.toLocaleString("tr-TR")}</p>
           </article>
-          <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs text-zinc-500">Toplam İşçilik Maliyeti</p>
-            <p className="mt-2 text-2xl font-semibold">{formatTry(totals.maliyet)}</p>
+          <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Toplam İşçilik Maliyeti
+            </p>
+            <p className="mt-2 text-3xl font-semibold">{formatTry(totals.maliyet)}</p>
           </article>
-          <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs text-zinc-500">Ort. Saatlik Maliyet</p>
-            <p className="mt-2 text-2xl font-semibold">
+          <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Ort. Saatlik Maliyet
+            </p>
+            <p className="mt-2 text-3xl font-semibold">
               {formatTry(totals.adamSaat > 0 ? totals.maliyet / totals.adamSaat : 0)}
             </p>
+          </article>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-3">
+          <article className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm lg:col-span-1">
+            <h2 className="text-sm font-semibold text-zinc-800">Son Gün Özeti</h2>
+            {latestDay ? (
+              <div className="mt-3 space-y-2 text-sm">
+                <p className="text-zinc-600">
+                  Tarih: <b className="text-zinc-900">{new Date(latestDay.date).toLocaleDateString("tr-TR")}</b>
+                </p>
+                <p className="text-zinc-600">
+                  Adam-saat:{" "}
+                  <b className="text-zinc-900">{latestDay.adamSaat.toLocaleString("tr-TR")}</b>
+                </p>
+                <p className="text-zinc-600">
+                  İşçilik: <b className="text-zinc-900">{formatTry(latestDay.maliyet)}</b>
+                </p>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-zinc-500">Henüz günlük veri yok.</p>
+            )}
+          </article>
+          <article className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm lg:col-span-2">
+            <h2 className="text-sm font-semibold text-zinc-800">Grup Bazlı İşçilik Dağılımı</h2>
+            <ul className="mt-4 space-y-3">
+              {groupStats.length === 0 ? (
+                <li className="text-sm text-zinc-500">Henüz kayıt yok.</li>
+              ) : (
+                groupStats.slice(0, 8).map((g) => {
+                  const ratio = maxGroupCost > 0 ? (g.maliyet / maxGroupCost) * 100 : 0;
+                  return (
+                    <li key={g.grup}>
+                      <div className="mb-1 flex items-center justify-between text-sm">
+                        <span className="font-medium text-zinc-800">Grup {g.grup}</span>
+                        <span className="text-zinc-600">
+                          {g.adamSaat.toLocaleString("tr-TR")} adam-saat • {formatTry(g.maliyet)}
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-zinc-100">
+                        <div className="h-2 rounded-full bg-zinc-800" style={{ width: `${ratio}%` }} />
+                      </div>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
           </article>
         </section>
 
@@ -130,35 +200,19 @@ export default async function PuantajPage() {
         ) : null}
 
         {!fetchError ? (
-          <section className="grid gap-4 lg:grid-cols-2">
-            <article className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-medium text-zinc-700">Grup Bazlı İşçilik Dağılımı</h2>
-              <ul className="mt-3 space-y-2">
-                {groupStats.length === 0 ? (
-                  <li className="text-sm text-zinc-500">Henüz kayıt yok.</li>
-                ) : (
-                  groupStats.map((g) => (
-                    <li key={g.grup} className="flex items-center justify-between rounded-lg border border-zinc-100 px-3 py-2 text-sm">
-                      <span>Grup {g.grup}</span>
-                      <span className="text-xs text-zinc-600">
-                        {g.adamSaat.toLocaleString("tr-TR")} adam-saat • {formatTry(g.maliyet)}
-                      </span>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </article>
-
-            <article className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
-              <table className="min-w-[900px] w-full text-sm">
+          <section className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
+            <table className="min-w-[1100px] w-full text-sm">
                 <thead className="bg-zinc-100 text-left text-zinc-700">
                   <tr>
                     <th className="px-3 py-2">Tarih</th>
                     <th className="px-3 py-2">Ekip</th>
+                    <th className="px-3 py-2">Taşeron</th>
                     <th className="px-3 py-2">Grup</th>
+                    <th className="px-3 py-2">Bölge</th>
                     <th className="px-3 py-2">Vardiya</th>
                     <th className="px-3 py-2 text-right">Kişi</th>
                     <th className="px-3 py-2 text-right">Saat</th>
+                    <th className="px-3 py-2 text-right">Saatlik</th>
                     <th className="px-3 py-2 text-right">Adam-Saat</th>
                     <th className="px-3 py-2 text-right">Maliyet</th>
                     <th className="px-3 py-2 text-right">İşlem</th>
@@ -167,7 +221,7 @@ export default async function PuantajPage() {
                 <tbody>
                   {rows.length === 0 ? (
                     <tr>
-                      <td className="px-3 py-4 text-zinc-500" colSpan={9}>
+                      <td className="px-3 py-4 text-zinc-500" colSpan={12}>
                         Henüz puantaj kaydı yok.
                       </td>
                     </tr>
@@ -179,10 +233,13 @@ export default async function PuantajPage() {
                         <tr key={row.id} className="border-t border-zinc-100">
                           <td className="px-3 py-2">{new Date(row.entry_date).toLocaleDateString("tr-TR")}</td>
                           <td className="px-3 py-2">{row.ekip_adi}</td>
+                          <td className="px-3 py-2">{row.taseron ?? "-"}</td>
                           <td className="px-3 py-2">{row.grup_kodu ?? "-"}</td>
+                          <td className="px-3 py-2">{row.bolge ?? "-"}</td>
                           <td className="px-3 py-2">{row.vardiya === "gece" ? "Gece" : "Gündüz"}</td>
                           <td className="px-3 py-2 text-right">{row.kisi_sayisi}</td>
                           <td className="px-3 py-2 text-right">{Number(row.saat).toLocaleString("tr-TR")}</td>
+                          <td className="px-3 py-2 text-right">{formatTry(Number(row.saatlik_maliyet))}</td>
                           <td className="px-3 py-2 text-right">{adamSaat.toLocaleString("tr-TR")}</td>
                           <td className="px-3 py-2 text-right">{formatTry(maliyet)}</td>
                           <td className="px-3 py-2 text-right">
@@ -202,8 +259,7 @@ export default async function PuantajPage() {
                     })
                   )}
                 </tbody>
-              </table>
-            </article>
+            </table>
           </section>
         ) : null}
       </main>
