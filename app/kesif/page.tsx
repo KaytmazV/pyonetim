@@ -121,8 +121,8 @@ export default async function KesifPage() {
         ) : null}
 
         {!fetchError ? (
-          <section className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-            <table className="w-full text-sm">
+          <section className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
+            <table className="min-w-[1200px] w-full text-sm">
               <thead className="bg-zinc-100 text-left text-zinc-700">
                 <tr>
                   <th className="px-3 py-2">Poz No</th>
